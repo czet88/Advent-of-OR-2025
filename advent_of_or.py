@@ -1,14 +1,17 @@
+import sys
 import gamspy as gp
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
 
 def main(
     segments: pd.DataFrame,
     assets: pd.DataFrame,
     correlation_df: pd.DataFrame,
-    profit_weight: float = 0.5,
-    consider_risk: bool = False,
+    profit_weight: float = -1,
+    consider_risk: bool = True,
+    confidence_interval: float = 0.95,
 ):
     with gp.Container():
         A = gp.Set(
@@ -28,18 +31,18 @@ def main(
             records=0.5,
         )
         z_score = gp.Parameter(
-            records=1.96,
-            description="Z-score for risk calculation (default: 1.96 corresponding to 95 percent confidence level)",
+            records=norm.ppf(confidence_interval),
+            description="Z-score for risk calculation (default: corresponding to 95 percent confidence level in one tail test)",
         )
         lo_a = gp.Parameter(
             domain=A,
             description="Lower bound for asset `a` relative exposure",
-            records=np.array([0.5] * len(A)),
+            records=assets[["asset", "max_exposure_decrease"]],
         )
         up_a = gp.Parameter(
             domain=A,
             description="Upper bound for asset `a` relative exposure",
-            records=np.array([1.5] * len(A)),
+            records=assets[["asset", "max_exposure_increase"]],
         )
         rel_origination_cost = gp.Parameter(
             domain=[A, S],
@@ -101,8 +104,8 @@ def main(
             description="Total exposure in new rebalanced portfolio for asset a",
             type="Positive",
         )
-        portfolio_exposure_vars.lo[A] = lo_a[A] * current_asset_exposure[A]
-        portfolio_exposure_vars.up[A] = up_a[A] * current_asset_exposure[A]
+        portfolio_exposure_vars.lo[A] = (1-lo_a[A]) * current_asset_exposure[A]
+        portfolio_exposure_vars.up[A] = (1+up_a[A]) * current_asset_exposure[A]
 
         ### --- Constraints --- ###
         # 1. Segment Relationship Constraint
@@ -126,11 +129,10 @@ def main(
 
         # 3. Risk Weight Constraint
         risk_weight = gp.Equation(
-            domain=[A, S],
             description="This constraint keeps the average risk weight at the portfolio-level below the user-defined threshold.",
         )
         risk_weight[...] = (
-            r[A, S] * exposure[A, S] * segment_vars[A, S]
+            gp.Sum([A,S], r[A, S] * exposure[A, S] * segment_vars[A, S])
             <= risk_weight_limit * new_total_exposure
         )
 
@@ -151,7 +153,7 @@ def main(
             + rel_sell_cost * exposure * segment_decrease_vars,
         )
         profit_objective_variable = gp.Variable()
-        net_profit = profit - transaction_cost == profit_objective_variable
+        net_profit = profit - transaction_cost == profit_objective_variable ## Why is this done this way.
         profit_equation = gp.Equation(definition=net_profit)
 
         # 2. Minimize risk
@@ -187,7 +189,7 @@ def main(
         if consider_risk:
             if profit_weight < 0:  # lexicographic
                 alpha[...] = 1
-                model.solve(solver="xpress")
+                model.solve(solver="xpress", output=sys.stdout)
                 rel_tol = 0.1
                 profit_objective_variable.lo = profit_objective_variable.l * (
                     1 - rel_tol
@@ -196,18 +198,21 @@ def main(
                 alpha[...] = 0
                 model.equations.append(risk_equation)
                 model.problem = gp.Problem.NLP
-                model.solve(solver="xpress")
+                model.solve(solver="xpress", output=sys.stdout)
             else:  # weighted
                 model.equations.append(risk_equation)
                 model.problem = gp.Problem.NLP
                 alpha[...] = profit_weight
-                model.solve(solver="xpress")
+                model.solve(solver="xpress", output=sys.stdout)
         else:
             alpha[...] = 1
-            model.solve(solver="xpress")
+            model.solve(solver="xpress", output=sys.stdout)
 
-        print(f"Profit: {profit_objective_variable.toValue()}")
-        print(f"Risk: {profit_downside_var.toValue()}")
+        print(f"Net Profit: {profit_objective_variable.toValue()}")
+        print(f"Expected Profit: {profit.toValue()}")
+        print(f"Transaction Cost: {transaction_cost.toValue()}")
+        print(f"Optimized Exposure: {new_total_exposure.toValue()}")
+        print(f"Profit Downside: {profit_downside_var.toValue()}")
 
 
 def get_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
