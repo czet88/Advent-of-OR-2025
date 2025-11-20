@@ -199,7 +199,7 @@ def main(
                 alpha[...] = 0
                 model.equations.append(risk_equation)
                 model.problem = gp.Problem.NLP
-                model.solve(solver="xpress", output=sys.stdout)
+                model.solve(solver="xpress", output=sys.stdout, options=gp.Options(relative_optimality_gap=0.01))
             else:  # weighted
                 model.equations.append(risk_equation)
                 model.problem = gp.Problem.NLP
