@@ -1,5 +1,5 @@
 type: python
-runtime: ghcr.io/nextmv-io/runtime/python:3.11
+runtime: ghcr.io/nextmv-io/runtime/gamspy:latest
 files:
   - main.py
 python:
@@ -13,9 +13,9 @@ configuration:
       input:
         path: inputs
       output:
-        solutions: outputs/outputs/solutions
-        statistics: outputs/outputs/statistics/statistics.json
-        assets: outputs/outputs/assets/assets.json
+        solutions: outputs/solutions
+        statistics: outputs/statistics/statistics.json
+        assets: outputs/assets/assets.json
   options:
     items:
       - name: profit_weight

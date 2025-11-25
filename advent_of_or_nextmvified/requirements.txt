@@ -1,4 +1,4 @@
 scipy==1.16.3
-nextmv[all]==0.35.1
+nextmv[all]==0.36.0
 pandas==2.3.3
 gamspy==1.17.2
