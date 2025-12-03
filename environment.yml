@@ -1,0 +1,15 @@
+# this file can be used on FICO Platform or for local installations to develop a Python/Insight app in Xpress Workbench.
+# Adjust the Python version and the package version to your needs.
+name: advent
+channels:
+  - fico-xpress
+dependencies:
+  - python=3.11
+  - xpressinsight~=1.15.0
+  - xpress~=9.8.0
+  - pandas
+  - scipy
+  - matplotlib
+  - pip # Crucial: install pip within the environment
+  - pip: # List pip dependencies under the 'pip:' key
+    - -r requirements.txt # Example of including a separate pip requirements file
