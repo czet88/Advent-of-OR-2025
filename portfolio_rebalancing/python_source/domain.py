@@ -29,7 +29,6 @@ class Asset:
     average_risk_weight: float = 0.0
     min_rel_exposure: float = 0.5  # Minimum allowable exposure for the asset
     max_rel_exposure: float = 1.5  # Maximum allowable exposure for the asset
-    profit_stdev: float = 0.0  # Standard deviation of the asset's profitability
 
     def add_segment(self, segment: Segment):
         """
@@ -48,7 +47,7 @@ class Portfolio:
     """
     portfolio_id: str
     assets: Dict[str, Asset] = field(default_factory=dict)
-    correlation_matrix: pd.DataFrame = field(default_factory=pd.DataFrame)
+    covariance_matrix: pd.DataFrame = field(default_factory=pd.DataFrame)
     total_exposure: float = 0.0
     total_profit: float = 0.0
     total_risk_weighted_assets: float = 0.0

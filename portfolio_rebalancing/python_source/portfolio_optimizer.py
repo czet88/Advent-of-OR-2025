@@ -1,7 +1,7 @@
 import xpress as xp
 from domain import Portfolio
 
-def optimize_portfolio(portfolio: Portfolio, risk_weight_limit: float, consider_risk: bool = True, z_score: float = 1.96, profit_weight: float=None) -> None:
+def optimize_portfolio(portfolio: Portfolio, risk_weight_limit: float, consider_risk: bool = True, z_score: float = 1.96, profit_weight: float=None, license_file: str = None) -> None:
     """
     Optimize the portfolio to maximize profit while keeping the average risk weight below a specified limit.
     
@@ -10,10 +10,11 @@ def optimize_portfolio(portfolio: Portfolio, risk_weight_limit: float, consider_
     - risk_weight_limit: Maximum allowable average risk weight for the entire portfolio.
     """
 
-    print(f"Printing correlation matrix")
-    print(portfolio.correlation_matrix)
+    print(f"Printing Covariance matrix")
+    print(portfolio.covariance_matrix)
     print(f"profit_weight {profit_weight} and consider_risk {consider_risk}")
     
+    xp.init(license_file)
     # Create a new optimization model
     model = xp.problem()
     
@@ -73,8 +74,8 @@ def optimize_portfolio(portfolio: Portfolio, risk_weight_limit: float, consider_
     # Considering portfolio variance in our optimization
     if consider_risk:
         # Constraint: Capture the variance based on covariance between assets
-        variance = xp.Sum(asset_i.profit_stdev * asset_j.profit_stdev * 
-                        portfolio.correlation_matrix.loc[asset_i.asset_id, asset_j.asset_id] * 
+        variance = xp.Sum(
+                        portfolio.covariance_matrix.loc[asset_i.asset_id, asset_j.asset_id] * 
                         portfolio_exposure_vars[asset_i.asset_id] * portfolio_exposure_vars[asset_j.asset_id]/(new_total_exposure * new_total_exposure)
                         for asset_i in portfolio.assets.values()
                         for asset_j in portfolio.assets.values())
@@ -97,8 +98,8 @@ def optimize_portfolio(portfolio: Portfolio, risk_weight_limit: float, consider_
     
     # Control settings
     model.controls.outputlog = 1
-    model.controls.bariterlimit = 1000
-    model.controls.miprelstop = 0.01
+    # model.controls.bariterlimit = 1000
+    # model.controls.miprelstop = 0.01
     model.setOutputEnabled(True)
     
     # Solve the optimization problem

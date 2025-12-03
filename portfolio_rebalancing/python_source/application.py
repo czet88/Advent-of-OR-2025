@@ -42,18 +42,17 @@ class InsightApp(xi.AppBase):
     Assets: xi.types.DataFrame(index="AssetIds", columns=[
         xi.types.Column("max_exposure_decrease", dtype=xi.real, format="0.0%", alias="Maximum Decrease"),
         xi.types.Column("max_exposure_increase", dtype=xi.real, format="0.0%", alias="Maximum Increase"),
-        xi.types.Column("stdev_profitability", dtype=xi.real, format="0.0%", alias="Profitability Standard Deviation"),
         xi.types.Column("exposure", dtype=xi.integer, alias="Original Exposure"),
         xi.types.Column("risk_weight", dtype=xi.real, alias="Original Risk Weight"),
         xi.types.Column("optimized_exposure", dtype=xi.integer, alias="Optimized Exposure", manage=xi.Manage.RESULT),
         xi.types.Column("average_risk_weight", dtype=xi.real, alias="Optimized Average Risk Weight", manage=xi.Manage.RESULT),
     ])
 
-    CorrelationMatrix:xi.types.DataFrame(index="AssetIds", columns=[
-        xi.types.Column("Retail_Mortgage", dtype=xi.real, format="0.0%", alias="Retail Mortgage"),
-        xi.types.Column("Retail_Revolving", dtype=xi.real, format="0.0%", alias="Retail Revolving"),
-        xi.types.Column("Retail_Other", dtype=xi.real, format="0.0%", alias="Retail Other"),
-    ])
+    # CovarianceMatrix:xi.types.DataFrame(index="AssetIds", columns=[
+    #     xi.types.Column("Retail_Mortgage", dtype=xi.real, format="0.0%", alias="Retail Mortgage"),
+    #     xi.types.Column("Retail_Revolving", dtype=xi.real, format="0.0%", alias="Retail Revolving"),
+    #     xi.types.Column("Retail_Other", dtype=xi.real, format="0.0%", alias="Retail Other"),
+    # ])
 
     # Portfolio level Results
     NetProfit: xi.types.Scalar(0.0, dtype=xi.real, manage=xi.Manage.RESULT)
@@ -96,13 +95,13 @@ class InsightApp(xi.AppBase):
         self.AssetIds = self.Assets.index
         self.Assets['exposure'] = temp_assets['exposure']
         self.Assets['risk_weight'] = temp_assets['rwa']/temp_assets['exposure']
-
-        # Load Correlation Matrix information
-        self.CorrelationMatrix = pd.read_csv(self.insight.get_attach_by_tag('correlation-file').filename, index_col=['asset'])
         print("\nLoad mode finished.")
 
     @xi.ExecModeRun(descr="Takes input data and uses it to compute the results.")
     def run(self):
+        # Read covariance matrix
+        CovarianceMatrix = pd.read_csv(self.insight.get_attach_by_tag('covariance-file').filename, index_col=['asset'])
+        
         # Result entities will be captured and stored in the scenario.
         print('Scenario:', self.insight.scenario_name)
         # Insight automatically populates the parameters and inputs with the values from the UI.
@@ -111,7 +110,8 @@ class InsightApp(xi.AppBase):
             self.ProfitWeight = -1
 
         z_score = norm.ppf(self.ConfidenceLevel)
-        df_result, df_assets = solve_optimization(self.Segments, self.Assets, self.CorrelationMatrix, self.MaxPortfolioRiskWeight, self.ConsiderRisk, z_score, self.ProfitWeight)
+        df_result, df_assets = solve_optimization(self.Segments, self.Assets, CovarianceMatrix, self.MaxPortfolioRiskWeight, self.ConsiderRisk, 
+                                                  z_score, self.ProfitWeight, license_file=self.insight.get_attach_by_tag('license-file').filename)
 
         # Update the results dataframes with the optimization solution
         self.Segments['optimized_exposure'] = pd.Series(list(df_result['exposure']), index=self.SegmentIds)
@@ -127,9 +127,9 @@ class InsightApp(xi.AppBase):
         self.OptimizedExposure = float(self.Segments['optimized_exposure'].sum())
         self.ARW = (self.Segments['optimized_exposure']*self.Segments['risk_weight']).sum()/self.OptimizedExposure
         self.NetProfit = self.ExpectedProfit - self.TransactionCosts
-        self.PortfolioProfitDownside = z_score * self.ExpectedProfit * math.sqrt(sum([self.Assets.loc[asset_i, 'stdev_profitability']*self.Assets.loc[asset_j, 'stdev_profitability']*
+        self.PortfolioProfitDownside = z_score * self.ExpectedProfit * math.sqrt(sum([
                                      self.Assets.loc[asset_i, 'portfolio_ratio'] * self.Assets.loc[asset_j, 'portfolio_ratio'] *
-                                     self.CorrelationMatrix.loc[asset_i, asset_j] for asset_i in self.Assets.index for asset_j in self.Assets.index]))
+                                     CovarianceMatrix.loc[asset_i, asset_j] for asset_i in self.Assets.index for asset_j in self.Assets.index]))
 
 
         solution = [{

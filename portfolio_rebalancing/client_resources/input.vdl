@@ -41,7 +41,6 @@
                     <vdl-table>
                         <vdl-table-column entity="Assets_max_exposure_decrease" editable="true"></vdl-table-column>
                         <vdl-table-column entity="Assets_max_exposure_increase" editable="true"></vdl-table-column>
-                        <vdl-table-column entity="Assets_stdev_profitability" editable="true"></vdl-table-column>
                         <vdl-table-column entity="Assets_risk_weight"></vdl-table-column>
                         <vdl-table-column entity="Assets_exposure"></vdl-table-column>
                         <vdl-table-column entity="Assets_optimized_exposure"></vdl-table-column>

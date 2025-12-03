@@ -19,10 +19,16 @@
 					<attachment>segments.csv</attachment>
 				</attachments>
 			</attachment-tag>
-			<attachment-tag name="correlation-file" usage="single-file" mandatory="true">
-				<description>A data source containing correlation information amongst assets required by the Python model before it can execute (load or run). Must be a CSV file.</description>
+			<attachment-tag name="covariance-file" usage="single-file" mandatory="true">
+				<description>A data source containing covariance information amongst assets required by the Python model before it can execute (load or run). Must be a CSV file.</description>
 				<attachments>
-					<attachment>correlation.csv</attachment>
+					<attachment>covariance.csv</attachment>
+				</attachments>
+			</attachment-tag>
+			<attachment-tag name="license-file" usage="single-file" mandatory="true">
+				<description>A data source containing covariance information amongst assets required by the Python model before it can execute (load or run). Must be a CSV file.</description>
+				<attachments>
+					<attachment>xpauth.xpr</attachment>
 				</attachments>
 			</attachment-tag>
 		</attachment-tags>

@@ -1,15 +1,13 @@
 from typing import Dict, Tuple
 from domain import Asset, Portfolio, Segment
 import pandas as pd
-import os
 
 
 class InstanceManager:
     def __init__(self, instance_name="test"):
         self.instance_name = instance_name
     
-    def from_csv(self, df_segments:pd.DataFrame, df_assets:pd.DataFrame, df_correlation_matrix: pd.DataFrame) -> Portfolio:
-        # df = pd.read_csv(os.path.join(folder_path, "segments.csv"))
+    def from_csv(self, df_segments:pd.DataFrame, df_assets:pd.DataFrame, df_covariance_matrix: pd.DataFrame) -> Portfolio:
         assets = {}
         for segment_id, row in df_segments.iterrows():
             asset_id = row['asset']
@@ -27,18 +25,15 @@ class InstanceManager:
                 assets[asset_id].add_segment(segment)
 
         # Update asset level information
-        # df = pd.read_csv(os.path.join(folder_path, "assets.csv"))
         for asset_id, row in df_assets.iterrows():
             min_rel_exposure = 1-row['max_exposure_decrease']
             max_rel_exposure = 1+row['max_exposure_increase']
-            stdev = row.get('stdev_profitability', 0.0)
 
             if asset_id in assets:
                 assets[asset_id].min_rel_exposure = min_rel_exposure
                 assets[asset_id].max_rel_exposure = max_rel_exposure
-                assets[asset_id].profit_stdev = stdev
 
-        return Portfolio(f"{self.instance_name}_input_portfolio", assets, df_correlation_matrix)
+        return Portfolio(f"{self.instance_name}_input_portfolio", assets, df_covariance_matrix)
 
     def new_portfolio(self, portfolio: Portfolio, new_distribution: Dict[Tuple[str, str], float]) -> Portfolio:
         new_assets = {}
